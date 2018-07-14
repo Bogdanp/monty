@@ -216,7 +216,7 @@ static char *test_scanner_can_scan_numbers() {
         { mt_TOKEN_NUMBER, "0", 1, 1 },
         { mt_TOKEN_NUMBER, "1234", 1, 3 },
         { mt_TOKEN_NUMBER, "12.05", 1, 8 },
-        { mt_TOKEN_ERROR, "multiple periods in number", 1, 14 },
+        { mt_TOKEN_ERROR, "multiple points in number", 1, 14 },
         { mt_TOKEN_ERROR, "numbers cannot start with 0", 1, 19 },
     };
 

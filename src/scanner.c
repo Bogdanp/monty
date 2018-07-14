@@ -122,16 +122,12 @@ static bool is_alpha(char c) {
     return is_lo_alpha(c) || is_hi_alpha(c);
 }
 
-static bool is_keyword(mt_Scanner *scanner, const char *keyword) {
+static bool match_keyword(mt_Scanner *scanner, const char *keyword) {
     size_t length = scanner->current - scanner->start;
-    if (length != strlen(keyword)) {
-        return false;
-    }
-
-    return memcmp(scanner->start, keyword, length) == 0;
+    return length == strlen(keyword) && memcmp(scanner->start, keyword, length) == 0;
 }
 
-static void chomp_comment(mt_Scanner *scanner, mt_Token *token) {
+static void load_comment(mt_Scanner *scanner, mt_Token *token) {
     while (*scanner->current != '\n' && *scanner->current != '\0') {
         scanner->current += 1;
     }
@@ -139,7 +135,30 @@ static void chomp_comment(mt_Scanner *scanner, mt_Token *token) {
     load_token(scanner, token, mt_TOKEN_COMMENT);
 }
 
-static void chomp_cap_name(mt_Scanner *scanner, mt_Token *token) {
+static void load_name(mt_Scanner *scanner, mt_Token *token) {
+    while (is_alpha(*scanner->current) || is_digit(*scanner->current) || *scanner->current == '_') {
+        scanner->current += 1;
+    }
+
+    if (match_keyword(scanner, "and"))           load_token(scanner, token, mt_TOKEN_AND);
+    else if (match_keyword(scanner, "def"))      load_token(scanner, token, mt_TOKEN_DEF);
+    else if (match_keyword(scanner, "else"))     load_token(scanner, token, mt_TOKEN_ELSE);
+    else if (match_keyword(scanner, "end"))      load_token(scanner, token, mt_TOKEN_END);
+    else if (match_keyword(scanner, "extend"))   load_token(scanner, token, mt_TOKEN_EXTEND);
+    else if (match_keyword(scanner, "for"))      load_token(scanner, token, mt_TOKEN_FOR);
+    else if (match_keyword(scanner, "if"))       load_token(scanner, token, mt_TOKEN_IF);
+    else if (match_keyword(scanner, "match"))    load_token(scanner, token, mt_TOKEN_MATCH);
+    else if (match_keyword(scanner, "not"))      load_token(scanner, token, mt_TOKEN_NOT);
+    else if (match_keyword(scanner, "or"))       load_token(scanner, token, mt_TOKEN_OR);
+    else if (match_keyword(scanner, "protocol")) load_token(scanner, token, mt_TOKEN_PROTOCOL);
+    else if (match_keyword(scanner, "record"))   load_token(scanner, token, mt_TOKEN_RECORD);
+    else if (match_keyword(scanner, "while"))    load_token(scanner, token, mt_TOKEN_WHILE);
+    else load_token(scanner, token, mt_TOKEN_NAME);
+
+    scanner->column += scanner->current - scanner->start - 1;
+}
+
+static void load_cap_name(mt_Scanner *scanner, mt_Token *token) {
     while (is_alpha(*scanner->current) || is_digit(*scanner->current) || *scanner->current == '_') {
         scanner->current += 1;
     }
@@ -148,30 +167,7 @@ static void chomp_cap_name(mt_Scanner *scanner, mt_Token *token) {
     scanner->column += scanner->current - scanner->start - 1;
 }
 
-static void chomp_name(mt_Scanner *scanner, mt_Token *token) {
-    while (is_alpha(*scanner->current) || is_digit(*scanner->current) || *scanner->current == '_') {
-        scanner->current += 1;
-    }
-
-    if (is_keyword(scanner, "and")) load_token(scanner, token, mt_TOKEN_AND);
-    else if (is_keyword(scanner, "def")) load_token(scanner, token, mt_TOKEN_DEF);
-    else if (is_keyword(scanner, "else")) load_token(scanner, token, mt_TOKEN_ELSE);
-    else if (is_keyword(scanner, "end")) load_token(scanner, token, mt_TOKEN_END);
-    else if (is_keyword(scanner, "extend")) load_token(scanner, token, mt_TOKEN_EXTEND);
-    else if (is_keyword(scanner, "for")) load_token(scanner, token, mt_TOKEN_FOR);
-    else if (is_keyword(scanner, "if")) load_token(scanner, token, mt_TOKEN_IF);
-    else if (is_keyword(scanner, "match")) load_token(scanner, token, mt_TOKEN_MATCH);
-    else if (is_keyword(scanner, "not")) load_token(scanner, token, mt_TOKEN_NOT);
-    else if (is_keyword(scanner, "or")) load_token(scanner, token, mt_TOKEN_OR);
-    else if (is_keyword(scanner, "protocol")) load_token(scanner, token, mt_TOKEN_PROTOCOL);
-    else if (is_keyword(scanner, "record")) load_token(scanner, token, mt_TOKEN_RECORD);
-    else if (is_keyword(scanner, "while")) load_token(scanner, token, mt_TOKEN_WHILE);
-    else load_token(scanner, token, mt_TOKEN_NAME);
-
-    scanner->column += scanner->current - scanner->start - 1;
-}
-
-static void chomp_number(mt_Scanner *scanner, mt_Token *token) {
+static void load_number(mt_Scanner *scanner, mt_Token *token) {
     char *error;
     bool failed = false;
     bool point_found = false;
@@ -179,7 +175,7 @@ static void chomp_number(mt_Scanner *scanner, mt_Token *token) {
         if (*scanner->current == '.') {
             if (point_found) {
                 failed = true;
-                error = "multiple periods in number";
+                error = "multiple points in number";
             }
 
             point_found = true;
@@ -202,7 +198,7 @@ static void chomp_number(mt_Scanner *scanner, mt_Token *token) {
     scanner->column += scanner->current - scanner->start - 1;
 }
 
-static void chomp_string(mt_Scanner *scanner, mt_Token *token) {
+static void load_string(mt_Scanner *scanner, mt_Token *token) {
     char pc;
     bool failed = false;
     while (*scanner->current != '"' || pc == '\\') {
@@ -237,17 +233,17 @@ void mt_scanner_scan(mt_Scanner *scanner, mt_Token *token) {
     char c = advance(scanner);
 
     if (c == '_' || is_lo_alpha(c)) {
-        chomp_name(scanner, token);
+        load_name(scanner, token);
         return;
     }
 
     if (is_hi_alpha(c)) {
-        chomp_cap_name(scanner, token);
+        load_cap_name(scanner, token);
         return;
     }
 
     if (is_digit(c)) {
-        chomp_number(scanner, token);
+        load_number(scanner, token);
         return;
     }
 
@@ -317,8 +313,8 @@ void mt_scanner_scan(mt_Scanner *scanner, mt_Token *token) {
 
         break;
 
-    case '"': chomp_string(scanner, token); break;
-    case '#': chomp_comment(scanner, token); break;
+    case '"': load_string(scanner, token); break;
+    case '#': load_comment(scanner, token); break;
 
     default:
         snprintf(scanner->error, sizeof(scanner->error) / sizeof(char), "unexpected token '%c'", c);
