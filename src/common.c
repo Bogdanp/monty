@@ -2,20 +2,22 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "common.h"
+
 #define BUFSIZE 16384
 
 size_t mt_get_file_size(FILE *handle) {
-    size_t file_size, old_position;
+    long file_size, old_position;
 
     old_position = ftell(handle);
     fseek(handle, 0, SEEK_END);
     file_size = ftell(handle);
-    fseek(handle, 0, old_position);
-    return file_size;
+    fseek(handle, old_position, SEEK_SET);
+    return (size_t)file_size;
 }
 
 char *mt_read_entire_stdin() {
-    char buf[BUFSIZE];
+    char buf[BUFSIZE] = "";
     char *outbuf = malloc(sizeof(char) * BUFSIZE);
     char *oldoutbuf = outbuf;
     size_t outbufsz = 1;
@@ -37,7 +39,7 @@ char *mt_read_entire_stdin() {
 }
 
 char *mt_read_entire_file(char *filename) {
-    FILE *handle = fopen(filename, "r");
+    FILE *handle = fopen(filename, "rb");
     if (!handle) return NULL;
 
     size_t file_size = mt_get_file_size(handle);
@@ -49,8 +51,8 @@ char *mt_read_entire_file(char *filename) {
 
     size_t bytes_read = fread(outbuf, sizeof(char), file_size, handle);
     if (bytes_read < file_size) {
-        free(outbuf);
         fclose(handle);
+        free(outbuf);
         return NULL;
     }
 

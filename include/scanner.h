@@ -67,6 +67,10 @@ typedef struct {
     uint32_t column;
 } mt_Token;
 
+/// Initialize a token's internals.  The token must be allocated and
+/// freed by the user.
+void mt_token_init(mt_Token *);
+
 /// Stringify a token into a buffer for debugging.
 void mt_token_debug(mt_Token *, char *, size_t);
 

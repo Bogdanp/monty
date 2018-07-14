@@ -21,6 +21,17 @@ static char *test_scanner_can_scan_empty_buffers() {
     return 0;
 }
 
+static char *test_scanner_leaves_buffers_intact() {
+    char original[] = "record Human\n  String name\nend";
+    memcpy(buf, original, sizeof(original));
+
+    mt_scanner_init(scanner, buf);
+    do { mt_scanner_scan(scanner, token); } while (token->type != mt_TOKEN_EOF);
+
+    mu_assert("expected the buffer to remain intact", memcmp(original, buf, sizeof(original)) == 0);
+    return 0;
+}
+
 static char *test_scanner_can_scan_single_character_tokens() {
     struct {
         mt_TokenType type;
@@ -274,6 +285,7 @@ static char *test_scanner_can_scan_comments() {
 
 static char *run_suite() {
     mu_run_test(test_scanner_can_scan_empty_buffers);
+    mu_run_test(test_scanner_leaves_buffers_intact);
     mu_run_test(test_scanner_can_scan_single_character_tokens);
     mu_run_test(test_scanner_can_scan_multi_character_tokens);
     mu_run_test(test_scanner_can_scan_identifiers);
@@ -285,8 +297,9 @@ static char *run_suite() {
 }
 
 int main(void) {
-    scanner = malloc(sizeof(mt_Scanner *));
-    token = malloc(sizeof(mt_Token *));
+    scanner = malloc(sizeof(mt_Scanner));
+    token = malloc(sizeof(mt_Token));
+    mt_token_init(token);
 
     char *message = run_suite();
     if (message) {

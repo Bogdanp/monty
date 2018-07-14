@@ -1,4 +1,4 @@
-CFLAGS := -Iinclude
+CFLAGS := -Iinclude -Wall
 
 BUILDDIR = build
 SOURCEDIR = src

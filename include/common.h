@@ -9,7 +9,7 @@
 size_t mt_get_file_size(FILE *);
 
 /// Read stdin until EOF and return the resulting character buffer.
-char *mt_read_entire_stdin();
+char *mt_read_entire_stdin(void);
 
 /// Read an entire file into a character buffer.  The caller is
 /// expected to free the buffer.  Returns NULL on error.

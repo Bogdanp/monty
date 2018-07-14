@@ -20,7 +20,7 @@ static char *source_from_filename = NULL;
 
 #define print_error(msg, ...) do { fprintf(stderr, "error: " msg "\n", ##__VA_ARGS__); exit(1); } while (0)
 
-void print_usage(char *program_name) {
+static void print_usage(char *program_name) {
     fprintf(
         stderr,
         "usage: %s [OPTION [OPTION ...]] [- | -c SOURCE | FILENAME] [ARG [ARG ...]]\n"
@@ -38,12 +38,12 @@ void print_usage(char *program_name) {
     exit(1);
 }
 
-void print_version() {
+static void print_version() {
     printf("monty %s\n", mt_VERSION);
     exit(0);
 }
 
-void parse_args(int *argc, char *argv[]) {
+static void parse_args(int *argc, char *argv[]) {
     if (*argc <= 1) {
         print_usage(argv[0]);
         return;
@@ -93,50 +93,52 @@ void parse_args(int *argc, char *argv[]) {
 int main(int argc, char *argv[]) {
     parse_args(&argc, argv);
 
-    mt_Scanner *scanner = malloc(sizeof(mt_Scanner *));
-    mt_Token *token = malloc(sizeof(mt_Token *));
+    mt_Scanner *scanner = malloc(sizeof(mt_Scanner));
+    mt_Token *token = malloc(sizeof(mt_Token));
+    mt_token_init(token);
 
     char *error = NULL;
     char *source = NULL;
     if (source_from_cli) {
-        mt_scanner_init(scanner, source_from_cli);
+        source = source_from_cli;
     } else if (source_from_filename) {
         source = mt_read_entire_file(source_from_filename);
         if (!source) {
             error = "could not read file";
             goto fail;
         }
-
-        mt_scanner_init(scanner, source);
     } else if (source_from_stdin) {
         source = mt_read_entire_stdin();
-        mt_scanner_init(scanner, source);
     } else {
         error = "interpreter not implemented";
         goto fail;
     }
 
+    mt_scanner_init(scanner, source);
+
     if (tokenize) {
         char debug_buf[255];
+
         do {
             mt_scanner_scan(scanner, token);
             mt_token_debug(token, debug_buf, sizeof(debug_buf));
-            printf("token: %s\n", debug_buf);
+
+            printf("%s\n", debug_buf);
         } while (token->type != mt_TOKEN_EOF);
     } else {
         error = "interpreter not implemented";
         goto fail;
     }
 
-    if (source) free(source);
-    free(scanner);
+    if (source && !source_from_cli) free(source);
     free(token);
+    free(scanner);
     return 0;
 
 fail:
-    if (source) free(source);
-    if (scanner) free(scanner);
+    if (source && !source_from_cli) free(source);
     if (token) free(token);
+    if (scanner) free(scanner);
     print_error("%s", error);
     return 1;
 }

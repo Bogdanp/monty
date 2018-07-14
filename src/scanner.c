@@ -53,9 +53,17 @@ static char *TOKEN_DEBUG_NAMES[] = {
     "TOKEN_WHILE",
 };
 
+void mt_token_init(mt_Token *token) {
+    token->type = mt_TOKEN_EOF;
+    token->start = NULL;
+    token->length = 0;
+    token->line = 0;
+    token->column = 0;
+}
+
 void mt_token_debug(mt_Token *token, char *buf, size_t bufsz) {
     char value[255] = "";
-    memcpy(value, token->start, MIN(token->length, sizeof(value)));
+    memcpy(value, token->start, MIN(token->length, sizeof(value) - 1));
 
     snprintf(
         buf,
@@ -124,7 +132,7 @@ static bool is_alpha(char c) {
 }
 
 static bool match_keyword(mt_Scanner *scanner, const char *keyword) {
-    size_t length = scanner->current - scanner->start;
+    size_t length = (size_t)(scanner->current - scanner->start);
     return length == strlen(keyword) && memcmp(scanner->start, keyword, length) == 0;
 }
 
@@ -169,7 +177,7 @@ static void load_cap_name(mt_Scanner *scanner, mt_Token *token) {
 }
 
 static void load_number(mt_Scanner *scanner, mt_Token *token) {
-    char *error;
+    const char *error = NULL;
     bool failed = false;
     bool point_found = false;
     while (is_digit(*scanner->current) || *scanner->current == '.') {
@@ -191,7 +199,7 @@ static void load_number(mt_Scanner *scanner, mt_Token *token) {
     }
 
     if (failed) {
-        fail_token(scanner, token, error);
+        fail_token(scanner, token, (char *)error);
     } else {
         load_token(scanner, token, mt_TOKEN_NUMBER);
     }
@@ -200,7 +208,7 @@ static void load_number(mt_Scanner *scanner, mt_Token *token) {
 }
 
 static void load_string(mt_Scanner *scanner, mt_Token *token) {
-    char pc;
+    char pc = 0;
     bool failed = false;
     while (*scanner->current != '"' || pc == '\\') {
         if (*scanner->current == '\0') {
@@ -224,6 +232,7 @@ static void load_string(mt_Scanner *scanner, mt_Token *token) {
 }
 
 void mt_scanner_init(mt_Scanner *scanner, char *buffer) {
+    memset(scanner->error, 0, 255);
     scanner->start = buffer;
     scanner->current = buffer;
     scanner->line = 1;
@@ -277,7 +286,7 @@ void mt_scanner_scan(mt_Scanner *scanner, mt_Token *token) {
             load_token(scanner, token, mt_TOKEN_BANG_EQUAL);
             advance(scanner);
         } else {
-            snprintf(scanner->error, sizeof(scanner->error) / sizeof(char), "expected '=' after '!' but found '%c'", peek(scanner));
+            snprintf(scanner->error, sizeof(scanner->error), "expected '=' after '!' but found '%c'", peek(scanner));
             fail_token(scanner, token, scanner->error);
             advance(scanner);
         }
@@ -318,7 +327,7 @@ void mt_scanner_scan(mt_Scanner *scanner, mt_Token *token) {
     case '#': load_comment(scanner, token); break;
 
     default:
-        snprintf(scanner->error, sizeof(scanner->error) / sizeof(char), "unexpected token '%c'", c);
+        snprintf(scanner->error, sizeof(scanner->error), "unexpected token '%c'", c);
         fail_token(scanner, token, scanner->error);
         break;
     }
