@@ -204,9 +204,20 @@ static void chomp_number(mt_Scanner *scanner, mt_Token *token) {
 
 static void chomp_string(mt_Scanner *scanner, mt_Token *token) {
     char pc;
+    bool failed = false;
     while (*scanner->current != '"' || pc == '\\') {
+        if (*scanner->current == '\0') {
+            failed = true;
+            break;
+        }
+
         pc = *scanner->current;
         scanner->current += 1;
+    }
+
+    if (failed) {
+        fail_token(scanner, token, "unexpected end of file while parsing string literal");
+        return;
     }
 
     scanner->current += 1;

@@ -181,9 +181,10 @@ static char *test_scanner_can_scan_strings() {
         { mt_TOKEN_STRING, "\"hello\"", 1, 1 },
         { mt_TOKEN_STRING, "\"\"", 1, 9 },
         { mt_TOKEN_STRING, "\"hello\\\"there\"", 1, 12 },
+        { mt_TOKEN_ERROR, "unexpected end of file while parsing string literal", 1, 27 },
     };
 
-    mt_scanner_init(scanner, "\"hello\" \"\" \"hello\\\"there\"");
+    mt_scanner_init(scanner, "\"hello\" \"\" \"hello\\\"there\" \"never closed");
 
     for (size_t i = 0; i < sizeof(tests) / sizeof(tests[0]); i++) {
         mt_scanner_scan(scanner, token);
