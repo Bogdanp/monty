@@ -22,7 +22,7 @@ int main(int argc, char *argv[]) {
     mt_Token *token = malloc(sizeof(mt_Token *));
     do {
         mt_scanner_scan(scanner, token);
-        mt_token_debug(token, debug_buf, 255);
+        mt_token_debug(token, debug_buf, sizeof(debug_buf));
         printf("token: %s\n", debug_buf);
     } while (token->type != mt_TOKEN_EOF);
 

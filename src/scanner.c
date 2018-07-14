@@ -1,10 +1,11 @@
-#include "scanner.h"
-
 #include <stdbool.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+
+#include "scanner.h"
+#include "utils.h"
 
 static char *TOKEN_DEBUG_NAMES[] = {
     "TOKEN_EOF",
@@ -54,7 +55,7 @@ static char *TOKEN_DEBUG_NAMES[] = {
 
 void mt_token_debug(mt_Token *token, char *buf, size_t bufsz) {
     char value[255] = "";
-    memcpy(value, token->start, token->length);
+    memcpy(value, token->start, MIN(token->length, sizeof(value)));
 
     snprintf(
         buf,

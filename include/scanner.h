@@ -60,8 +60,8 @@ typedef enum {
 typedef struct {
     mt_TokenType type;
 
-    char *start;
-    size_t length;
+    char *start;  ///< the start position in the source buffer for this token's value
+    size_t length;  ///< the length of this token's value
 
     uint32_t line;
     uint32_t column;

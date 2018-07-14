@@ -6,11 +6,14 @@ SOURCES = $(wildcard $(SOURCEDIR)/*.c)
 OBJECTS = $(patsubst $(SOURCEDIR)/%.c,$(BUILDDIR)/%.o,$(SOURCES))
 
 .PHONY: all
-all: build $(OBJECTS)
+all: build demo $(OBJECTS)
 
 .PHONY: clean
 clean:
-	rm -rf build tests/build
+	rm -rf build demo tests/build
+
+demo: $(OBJECTS) demo.c
+	$(CC) $(CFLAGS) $^ -o $@
 
 build:
 	mkdir -p build
