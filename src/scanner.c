@@ -6,53 +6,50 @@
 #include <stdlib.h>
 #include <string.h>
 
-#define min(a, b) ((a < b) ? a : b)
-
 static char *TOKEN_DEBUG_NAMES[] = {
-    "mt_TOKEN_EOF",
-    "mt_TOKEN_ERROR",
+    "TOKEN_EOF",
+    "TOKEN_ERROR",
+    "TOKEN_COMMENT",
 
-    "mt_TOKEN_DOT",
-    "mt_TOKEN_COMMA",
-    "mt_TOKEN_LPAREN",
-    "mt_TOKEN_RPAREN",
-    "mt_TOKEN_LBRACKET",
-    "mt_TOKEN_RBRACKET",
-    "mt_TOKEN_PLUS",
-    "mt_TOKEN_MINUS",
-    "mt_TOKEN_STAR",
-    "mt_TOKEN_SLASH",
+    "TOKEN_DOT",
+    "TOKEN_COMMA",
+    "TOKEN_LPAREN",
+    "TOKEN_RPAREN",
+    "TOKEN_LBRACKET",
+    "TOKEN_RBRACKET",
+    "TOKEN_PLUS",
+    "TOKEN_MINUS",
+    "TOKEN_STAR",
+    "TOKEN_SLASH",
 
-    "mt_TOKEN_EQUAL",
-    "mt_TOKEN_EQUAL_EQUAL",
-    "mt_TOKEN_BANG_EQUAL",
-    "mt_TOKEN_LESS",
-    "mt_TOKEN_LESS_EQUAL",
-    "mt_TOKEN_GREATER",
-    "mt_TOKEN_GREATER_EQUAL",
-    "mt_TOKEN_COLON",
-    "mt_TOKEN_COLON_EQUAL",
+    "TOKEN_EQUAL",
+    "TOKEN_EQUAL_EQUAL",
+    "TOKEN_BANG_EQUAL",
+    "TOKEN_LESS",
+    "TOKEN_LESS_EQUAL",
+    "TOKEN_GREATER",
+    "TOKEN_GREATER_EQUAL",
+    "TOKEN_COLON",
+    "TOKEN_COLON_EQUAL",
 
-    "mt_TOKEN_CAP_NAME",
-    "mt_TOKEN_NAME",
-    "mt_TOKEN_STRING",
-    "mt_TOKEN_NUMBER",
+    "TOKEN_CAP_NAME",
+    "TOKEN_NAME",
+    "TOKEN_STRING",
+    "TOKEN_NUMBER",
 
-    "mt_TOKEN_AND",
-    "mt_TOKEN_DEF",
-    "mt_TOKEN_ELSE",
-    "mt_TOKEN_END",
-    "mt_TOKEN_EXTEND",
-    "mt_TOKEN_FOR",
-    "mt_TOKEN_IF",
-    "mt_TOKEN_MATCH",
-    "mt_TOKEN_NOT",
-    "mt_TOKEN_OR",
-    "mt_TOKEN_PROTOCOL",
-    "mt_TOKEN_RECORD",
-    "mt_TOKEN_WHILE",
-
-    "mt_TOKEN_COMMENT",
+    "TOKEN_AND",
+    "TOKEN_DEF",
+    "TOKEN_ELSE",
+    "TOKEN_END",
+    "TOKEN_EXTEND",
+    "TOKEN_FOR",
+    "TOKEN_IF",
+    "TOKEN_MATCH",
+    "TOKEN_NOT",
+    "TOKEN_OR",
+    "TOKEN_PROTOCOL",
+    "TOKEN_RECORD",
+    "TOKEN_WHILE",
 };
 
 void mt_token_debug(mt_Token *token, char *buf, size_t bufsz) {
@@ -78,7 +75,7 @@ static void load_token(mt_Scanner *scanner, mt_Token *token, mt_TokenType type) 
     token->column = scanner->column;
 }
 
-static void error_token(mt_Scanner *scanner, mt_Token *token, char *message) {
+static void fail_token(mt_Scanner *scanner, mt_Token *token, char *message) {
     token->type = mt_TOKEN_ERROR;
     token->start = message;
     token->length = strlen(message);
@@ -113,16 +110,16 @@ static bool is_digit(char c) {
     return '0' <= c && c <= '9';
 }
 
-static bool is_low_alpha(char c) {
+static bool is_lo_alpha(char c) {
     return 'a' <= c && c <= 'z';
 }
 
-static bool is_high_alpha(char c) {
+static bool is_hi_alpha(char c) {
     return 'A' <= c && c <= 'Z';
 }
 
 static bool is_alpha(char c) {
-    return is_low_alpha(c) || is_high_alpha(c);
+    return is_lo_alpha(c) || is_hi_alpha(c);
 }
 
 static bool is_keyword(mt_Scanner *scanner, const char *keyword) {
@@ -197,7 +194,7 @@ static void chomp_number(mt_Scanner *scanner, mt_Token *token) {
     }
 
     if (failed) {
-        error_token(scanner, token, error);
+        fail_token(scanner, token, error);
     } else {
         load_token(scanner, token, mt_TOKEN_NUMBER);
     }
@@ -226,15 +223,14 @@ void mt_scanner_init(mt_Scanner *scanner, char *buffer) {
 }
 
 void mt_scanner_scan(mt_Scanner *scanner, mt_Token *token) {
-    static char buf[255];
     char c = advance(scanner);
 
-    if (c == '_' || is_low_alpha(c)) {
+    if (c == '_' || is_lo_alpha(c)) {
         chomp_name(scanner, token);
         return;
     }
 
-    if (is_high_alpha(c)) {
+    if (is_hi_alpha(c)) {
         chomp_cap_name(scanner, token);
         return;
     }
@@ -273,8 +269,8 @@ void mt_scanner_scan(mt_Scanner *scanner, mt_Token *token) {
             load_token(scanner, token, mt_TOKEN_BANG_EQUAL);
             advance(scanner);
         } else {
-            snprintf(buf, 255, "expected '=' after '!' but found '%c'", peek(scanner));
-            error_token(scanner, token, buf);
+            snprintf(scanner->error, sizeof(scanner->error) / sizeof(char), "expected '=' after '!' but found '%c'", peek(scanner));
+            fail_token(scanner, token, scanner->error);
             advance(scanner);
         }
 
@@ -314,8 +310,8 @@ void mt_scanner_scan(mt_Scanner *scanner, mt_Token *token) {
     case '#': chomp_comment(scanner, token); break;
 
     default:
-        snprintf(buf, 255, "unexpected token '%c'", c);
-        error_token(scanner, token, buf);
+        snprintf(scanner->error, sizeof(scanner->error) / sizeof(char), "unexpected token '%c'", c);
+        fail_token(scanner, token, scanner->error);
         break;
     }
 }
