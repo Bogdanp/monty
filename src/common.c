@@ -1,5 +1,8 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
+
+#define BUFSIZE 16384
 
 size_t mt_get_file_size(FILE *handle) {
     size_t file_size, old_position;
@@ -9,6 +12,28 @@ size_t mt_get_file_size(FILE *handle) {
     file_size = ftell(handle);
     fseek(handle, 0, old_position);
     return file_size;
+}
+
+char *mt_read_entire_stdin() {
+    char buf[BUFSIZE];
+    char *outbuf = malloc(sizeof(char) * BUFSIZE);
+    char *oldoutbuf = outbuf;
+    size_t outbufsz = 1;
+
+    outbuf[0] = '\0';
+    while (fgets(buf, BUFSIZE, stdin)) {
+        oldoutbuf = outbuf;
+        outbufsz += strlen(buf);
+        outbuf = (char *)realloc(outbuf, sizeof(char) * outbufsz);
+        if (!outbuf) {
+            free(oldoutbuf);
+            return NULL;
+        }
+
+        strcat(outbuf, buf);
+    }
+
+    return outbuf;
 }
 
 char *mt_read_entire_file(char *filename) {
