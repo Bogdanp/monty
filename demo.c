@@ -1,5 +1,6 @@
 #include <stdio.h>
 
+#include "common.h"
 #include "scanner.h"
 
 int main(int argc, char *argv[]) {
@@ -8,24 +9,14 @@ int main(int argc, char *argv[]) {
         return 1;
     }
 
-    const char *filename = argv[1];
-    FILE *fp = fopen(filename, "r");
-    if (!fp) {
-        perror("fopen");
+    char *source = mt_read_entire_file(argv[1]);
+    if (!source) {
+        fprintf(stderr, "error: failed to read %s\n", argv[1]);
         return 1;
     }
 
-    fseek(fp, 0, SEEK_END);
-    size_t size = ftell(fp);
-    fseek(fp, 0, SEEK_SET);
-
-    char *buf = malloc(sizeof(char) * size + 1);
-    size_t read = fread(buf, sizeof(char), size, fp);
-    buf[read] = '\0';
-    fclose(fp);
-
     mt_Scanner *scanner = malloc(sizeof(mt_Scanner *));
-    mt_scanner_init(scanner, buf);
+    mt_scanner_init(scanner, source);
 
     char debug_buf[255];
     mt_Token *token = malloc(sizeof(mt_Token *));
@@ -35,6 +26,7 @@ int main(int argc, char *argv[]) {
         printf("token: %s\n", debug_buf);
     } while (token->type != mt_TOKEN_EOF);
 
+    free(source);
     free(scanner);
     free(token);
 
