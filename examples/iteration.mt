@@ -4,7 +4,7 @@ end
 
 protocol Iterator[T]
   Boolean has_more(self)
-  T next(self)
+  T get_next(self)
 end
 
 record Range
