@@ -7,6 +7,9 @@
 #include "scanner.h"
 #include "utils.h"
 
+/// Token
+/// =====
+
 static char *TOKEN_DEBUG_NAMES[] = {
     "TOKEN_EOF",
     "TOKEN_ERROR",
@@ -81,7 +84,7 @@ static void load_token(mt_Scanner *scanner, mt_Token *token, mt_TokenType type) 
     token->start = scanner->start;
     token->length = (size_t)(scanner->current - scanner->start);
     token->line = scanner->line;
-    token->column = scanner->column;
+    token->column = scanner->column - token->length + 1;
 }
 
 static void fail_token(mt_Scanner *scanner, mt_Token *token, char *message) {
@@ -89,9 +92,12 @@ static void fail_token(mt_Scanner *scanner, mt_Token *token, char *message) {
     token->start = message;
     token->length = strlen(message);
     token->line = scanner->line;
-    token->column = scanner->column;
+    token->column = scanner->column - (size_t)(scanner->current - scanner->start) + 1;
 }
 
+
+/// Scanner
+/// =======
 
 static char advance(mt_Scanner *scanner) {
     char c;
@@ -113,6 +119,16 @@ static char advance(mt_Scanner *scanner) {
 
 static char peek(mt_Scanner *scanner) {
     return *scanner->current;
+}
+
+static char match(mt_Scanner *scanner, char c) {
+    if (peek(scanner) == c) {
+        scanner->current += 1;
+        scanner->column += 1;
+        return c;
+    }
+
+    return 0;
 }
 
 static bool is_digit(char c) {
@@ -139,6 +155,7 @@ static bool match_keyword(mt_Scanner *scanner, const char *keyword) {
 static void load_comment(mt_Scanner *scanner, mt_Token *token) {
     while (*scanner->current != '\n' && *scanner->current != '\0') {
         scanner->current += 1;
+        scanner->column += 1;
     }
 
     load_token(scanner, token, mt_TOKEN_COMMENT);
@@ -147,6 +164,7 @@ static void load_comment(mt_Scanner *scanner, mt_Token *token) {
 static void load_name(mt_Scanner *scanner, mt_Token *token) {
     while (is_alpha(*scanner->current) || is_digit(*scanner->current) || *scanner->current == '_') {
         scanner->current += 1;
+        scanner->column += 1;
     }
 
     if (match_keyword(scanner, "and"))           load_token(scanner, token, mt_TOKEN_AND);
@@ -163,17 +181,15 @@ static void load_name(mt_Scanner *scanner, mt_Token *token) {
     else if (match_keyword(scanner, "record"))   load_token(scanner, token, mt_TOKEN_RECORD);
     else if (match_keyword(scanner, "while"))    load_token(scanner, token, mt_TOKEN_WHILE);
     else load_token(scanner, token, mt_TOKEN_NAME);
-
-    scanner->column += scanner->current - scanner->start - 1;
 }
 
 static void load_cap_name(mt_Scanner *scanner, mt_Token *token) {
     while (is_alpha(*scanner->current) || is_digit(*scanner->current) || *scanner->current == '_') {
         scanner->current += 1;
+        scanner->column += 1;
     }
 
     load_token(scanner, token, mt_TOKEN_CAP_NAME);
-    scanner->column += scanner->current - scanner->start - 1;
 }
 
 static void load_number(mt_Scanner *scanner, mt_Token *token) {
@@ -191,6 +207,7 @@ static void load_number(mt_Scanner *scanner, mt_Token *token) {
         }
 
         scanner->current += 1;
+        scanner->column += 1;
     }
 
     if (*scanner->start == '0' && scanner->current - scanner->start > 1) {
@@ -203,32 +220,42 @@ static void load_number(mt_Scanner *scanner, mt_Token *token) {
     } else {
         load_token(scanner, token, mt_TOKEN_NUMBER);
     }
-
-    scanner->column += scanner->current - scanner->start - 1;
 }
 
 static void load_string(mt_Scanner *scanner, mt_Token *token) {
     char pc = 0;
-    bool failed = false;
-    while (*scanner->current != '"' || pc == '\\') {
-        if (*scanner->current == '\0') {
-            failed = true;
-            break;
+
+    uint32_t lines = 0;
+    uint32_t column = 0;
+    while (*scanner->current != '\0' && (*scanner->current != '"' || pc == '\\')) {
+        if (*scanner->current == '\n') {
+            lines += 1;
+            column = 0;
         }
 
         pc = *scanner->current;
         scanner->current += 1;
+        scanner->column += 1;
+        column += 1;
     }
 
-    if (failed) {
+    if (*scanner->current == '\0') {
+        // If the string is multiline, then the line and column of the
+        // following token will be wrong.  That's OK though, since
+        // strings only fail on EOF (which means there is no
+        // "following token").
         fail_token(scanner, token, "unexpected end of file while parsing string literal");
         return;
     }
 
     scanner->current += 1;
-
+    scanner->column += 1;
     load_token(scanner, token, mt_TOKEN_STRING);
-    scanner->column += scanner->current - scanner->start - 1;
+
+    if (lines > 0) {
+        scanner->line += lines;
+        scanner->column = column;
+    }
 }
 
 void mt_scanner_init(mt_Scanner *scanner, char *buffer) {
@@ -258,8 +285,6 @@ void mt_scanner_scan(mt_Scanner *scanner, mt_Token *token) {
     }
 
     switch (c) {
-    case '\0': load_token(scanner, token, mt_TOKEN_EOF); break;
-
     case '.': load_token(scanner, token, mt_TOKEN_DOT); break;
     case ',': load_token(scanner, token, mt_TOKEN_COMMA); break;
     case '(': load_token(scanner, token, mt_TOKEN_LPAREN); break;
@@ -272,20 +297,13 @@ void mt_scanner_scan(mt_Scanner *scanner, mt_Token *token) {
     case '/': load_token(scanner, token, mt_TOKEN_SLASH); break;
 
     case '=':
-        if (peek(scanner) == '=') {
-            load_token(scanner, token, mt_TOKEN_EQUAL_EQUAL);
-            advance(scanner);
-        } else {
-            load_token(scanner, token, mt_TOKEN_EQUAL);
-        }
-
+        if (match(scanner, '=')) load_token(scanner, token, mt_TOKEN_EQUAL_EQUAL);
+        else                     load_token(scanner, token, mt_TOKEN_EQUAL);
         break;
 
     case '!':
-        if (peek(scanner) == '=') {
-            load_token(scanner, token, mt_TOKEN_BANG_EQUAL);
-            advance(scanner);
-        } else {
+        if (match(scanner, '=')) load_token(scanner, token, mt_TOKEN_BANG_EQUAL);
+        else {
             snprintf(scanner->error, sizeof(scanner->error), "expected '=' after '!' but found '%c'", peek(scanner));
             fail_token(scanner, token, scanner->error);
             advance(scanner);
@@ -294,37 +312,24 @@ void mt_scanner_scan(mt_Scanner *scanner, mt_Token *token) {
         break;
 
     case '<':
-        if (peek(scanner) == '=') {
-            load_token(scanner, token, mt_TOKEN_LESS_EQUAL);
-            advance(scanner);
-        } else {
-            load_token(scanner, token, mt_TOKEN_LESS);
-        }
-
+        if (match(scanner, '=')) load_token(scanner, token, mt_TOKEN_LESS_EQUAL);
+        else                     load_token(scanner, token, mt_TOKEN_LESS);
         break;
 
     case '>':
-        if (peek(scanner) == '=') {
-            load_token(scanner, token, mt_TOKEN_GREATER_EQUAL);
-            advance(scanner);
-        } else {
-            load_token(scanner, token, mt_TOKEN_GREATER);
-        }
-
+        if (match(scanner, '=')) load_token(scanner, token, mt_TOKEN_GREATER_EQUAL);
+        else                     load_token(scanner, token, mt_TOKEN_GREATER);
         break;
 
     case ':':
-        if (peek(scanner) == '=') {
-            load_token(scanner, token, mt_TOKEN_COLON_EQUAL);
-            advance(scanner);
-        } else {
-            load_token(scanner, token, mt_TOKEN_COLON);
-        }
-
+        if (match(scanner, '=')) load_token(scanner, token, mt_TOKEN_COLON_EQUAL);
+        else                     load_token(scanner, token, mt_TOKEN_COLON);
         break;
 
     case '"': load_string(scanner, token); break;
     case '#': load_comment(scanner, token); break;
+
+    case '\0': load_token(scanner, token, mt_TOKEN_EOF); break;
 
     default:
         snprintf(scanner->error, sizeof(scanner->error), "unexpected token '%c'", c);

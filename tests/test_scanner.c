@@ -2,8 +2,10 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "minunit.h"
+#include "common.h"
 #include "scanner.h"
+
+#include "minunit.h"
 
 int tests_run = 0;
 
@@ -32,96 +34,18 @@ static char *test_scanner_leaves_buffers_intact() {
     return 0;
 }
 
-static char *test_scanner_can_scan_single_character_tokens() {
-    struct {
-        mt_TokenType type;
-        uint32_t line;
-        uint32_t column;
-    } tests[] = {
-        { mt_TOKEN_LPAREN, 1, 1 },
-        { mt_TOKEN_RPAREN, 1, 2 },
-        { mt_TOKEN_LBRACKET, 1, 3 },
-        { mt_TOKEN_RBRACKET, 1, 4 },
-        { mt_TOKEN_DOT, 2, 1 },
-        { mt_TOKEN_COMMA, 2, 2 },
-        { mt_TOKEN_PLUS, 3, 1 },
-        { mt_TOKEN_MINUS, 3, 2 },
-        { mt_TOKEN_STAR, 3, 3 },
-        { mt_TOKEN_SLASH, 3, 4 },
-    };
+typedef struct {
+    mt_TokenType type;
+    char *expected;
+    uint32_t line;
+    uint32_t column;
+} TableTest;
 
-    mt_scanner_init(scanner, "()[]\n.,\n+-*/");
+static char *run_table_tests(TableTest tests[], size_t ntests, char *source) {
+    mt_token_init(token);
+    mt_scanner_init(scanner, source);
 
-    for (size_t i = 0; i < sizeof(tests) / sizeof(tests[0]); i++) {
-        mt_scanner_scan(scanner, token);
-
-        sprintf(buf, "expected token type %d got %d (test %ld)", tests[i].type, token->type, i);
-        mu_assert(buf, token->type == tests[i].type);
-
-        sprintf(buf, "expected token line %d got %d (test %ld)", tests[i].line, token->line, i);
-        mu_assert(buf, token->line == tests[i].line);
-
-        sprintf(buf, "expected token column %d got %d (test %ld)", tests[i].column, token->column, i);
-        mu_assert(buf, token->column == tests[i].column);
-    }
-
-    return 0;
-}
-
-static char *test_scanner_can_scan_multi_character_tokens() {
-    struct {
-        mt_TokenType type;
-        uint32_t line;
-        uint32_t column;
-    } tests[] = {
-        { mt_TOKEN_COLON, 1, 1 },
-        { mt_TOKEN_COLON_EQUAL, 1, 3 },
-        { mt_TOKEN_BANG_EQUAL, 1, 6 },
-        { mt_TOKEN_EQUAL, 2, 1 },
-        { mt_TOKEN_EQUAL_EQUAL, 2, 3 },
-        { mt_TOKEN_LESS, 3, 1 },
-        { mt_TOKEN_LESS_EQUAL, 3, 3 },
-        { mt_TOKEN_GREATER, 4, 1 },
-        { mt_TOKEN_GREATER_EQUAL, 4, 3 },
-        { mt_TOKEN_ERROR, 5, 1 },
-    };
-
-    mt_scanner_init(scanner, ": := !=\n= ==\n< <=\n> >=\n!2");
-
-    for (size_t i = 0; i < sizeof(tests) / sizeof(tests[0]); i++) {
-        mt_scanner_scan(scanner, token);
-
-        sprintf(buf, "expected token type %d got %d (test %ld)", tests[i].type, token->type, i);
-        mu_assert(buf, token->type == tests[i].type);
-
-        sprintf(buf, "expected token line %d got %d (test %ld)", tests[i].line, token->line, i);
-        mu_assert(buf, token->line == tests[i].line);
-
-        sprintf(buf, "expected token column %d got %d (test %ld)", tests[i].column, token->column, i);
-        mu_assert(buf, token->column == tests[i].column);
-    }
-
-    return 0;
-}
-
-static char *test_scanner_can_scan_identifiers() {
-    struct {
-        mt_TokenType type;
-        char *expected;
-        uint32_t line;
-        uint32_t column;
-    } tests[] = {
-        { mt_TOKEN_NAME, "a", 1, 1 },
-        { mt_TOKEN_NAME, "b", 1, 3 },
-        { mt_TOKEN_CAP_NAME, "Integer", 1, 5 },
-        { mt_TOKEN_NAME, "current_token", 1, 13 },
-        { mt_TOKEN_CAP_NAME, "Some_Class", 1, 27 },
-        { mt_TOKEN_NAME, "___", 1, 38 },
-    };
-
-    mt_scanner_init(scanner, "a b Integer current_token Some_Class ___");
-
-    for (size_t i = 0; i < sizeof(tests) / sizeof(tests[0]); i++) {
+    for (size_t i = 0; i < ntests; i++) {
         mt_scanner_scan(scanner, token);
 
         sprintf(buf, "expected token type %d got %d (test %ld)", tests[i].type, token->type, i);
@@ -141,13 +65,55 @@ static char *test_scanner_can_scan_identifiers() {
     return 0;
 }
 
+static char *test_scanner_can_scan_single_character_tokens() {
+    TableTest tests[] = {
+        { mt_TOKEN_LPAREN, "(", 1, 1 },
+        { mt_TOKEN_RPAREN, ")", 1, 2 },
+        { mt_TOKEN_LBRACKET, "[", 1, 3 },
+        { mt_TOKEN_RBRACKET, "]", 1, 4 },
+        { mt_TOKEN_DOT, ".", 2, 1 },
+        { mt_TOKEN_COMMA, ",", 2, 2 },
+        { mt_TOKEN_PLUS, "+", 3, 1 },
+        { mt_TOKEN_MINUS, "-", 3, 2 },
+        { mt_TOKEN_STAR, "*", 3, 3 },
+        { mt_TOKEN_SLASH, "/", 3, 4 },
+    };
+
+    return run_table_tests(tests, sizeof(tests) / sizeof(tests[0]), "()[]\n.,\n+-*/");
+}
+
+static char *test_scanner_can_scan_multi_character_tokens() {
+    TableTest tests[] = {
+        { mt_TOKEN_COLON, ":", 1, 1 },
+        { mt_TOKEN_COLON_EQUAL, ":=", 1, 3 },
+        { mt_TOKEN_BANG_EQUAL, "!=", 1, 6 },
+        { mt_TOKEN_EQUAL, "=", 2, 1 },
+        { mt_TOKEN_EQUAL_EQUAL, "==", 2, 3 },
+        { mt_TOKEN_LESS, "<", 3, 1 },
+        { mt_TOKEN_LESS_EQUAL, "<=", 3, 3 },
+        { mt_TOKEN_GREATER, ">", 4, 1 },
+        { mt_TOKEN_GREATER_EQUAL, ">=", 4, 3 },
+        { mt_TOKEN_ERROR, "expected '=' after '!' but found '2'", 5, 1 },
+    };
+
+    return run_table_tests(tests, sizeof(tests) / sizeof(tests[0]), ": := !=\n= ==\n< <=\n> >=\n!2");
+}
+
+static char *test_scanner_can_scan_identifiers() {
+    TableTest tests[] = {
+        { mt_TOKEN_NAME, "a", 1, 1 },
+        { mt_TOKEN_NAME, "b", 1, 3 },
+        { mt_TOKEN_CAP_NAME, "Integer", 1, 5 },
+        { mt_TOKEN_NAME, "current_token", 1, 13 },
+        { mt_TOKEN_CAP_NAME, "Some_Class", 1, 27 },
+        { mt_TOKEN_NAME, "___", 1, 38 },
+    };
+
+    return run_table_tests(tests, sizeof(tests) / sizeof(tests[0]), "a b Integer current_token Some_Class ___");
+}
+
 static char *test_scanner_can_scan_keywords() {
-    struct {
-        mt_TokenType type;
-        char *expected;
-        uint32_t line;
-        uint32_t column;
-    } tests[] = {
+    TableTest tests[] = {
         { mt_TOKEN_PROTOCOL, "protocol", 1, 1 },
         { mt_TOKEN_RECORD, "record", 1, 10 },
         { mt_TOKEN_EXTEND, "extend", 1, 17 },
@@ -160,70 +126,39 @@ static char *test_scanner_can_scan_keywords() {
         { mt_TOKEN_END, "end", 1, 52 },
     };
 
-    mt_scanner_init(scanner, "protocol record extend def if else for while match end");
-
-    for (size_t i = 0; i < sizeof(tests) / sizeof(tests[0]); i++) {
-        mt_scanner_scan(scanner, token);
-
-        sprintf(buf, "expected token type %d got %d (test %ld)", tests[i].type, token->type, i);
-        mu_assert(buf, token->type == tests[i].type);
-
-        sprintf(buf, "expected token line %d got %d (test %ld)", tests[i].line, token->line, i);
-        mu_assert(buf, token->line == tests[i].line);
-
-        sprintf(buf, "expected token column %d got %d (test %ld)", tests[i].column, token->column, i);
-        mu_assert(buf, token->column == tests[i].column);
-
-        memcpy(buf_2, token->start, token->length);
-        sprintf(buf, "expected token value %s got %s (test %ld)", tests[i].expected, buf_2, i);
-        mu_assert(buf, memcmp(tests[i].expected, buf_2, strlen(tests[i].expected)) == 0);
-    }
-
-    return 0;
+    return run_table_tests(tests, sizeof(tests) / sizeof(tests[0]), "protocol record extend def if else for while match end");
 }
 
 static char *test_scanner_can_scan_strings() {
-    struct {
-        mt_TokenType type;
-        char *expected;
-        uint32_t line;
-        uint32_t column;
-    } tests[] = {
+    TableTest tests[] = {
         { mt_TOKEN_STRING, "\"hello\"", 1, 1 },
         { mt_TOKEN_STRING, "\"\"", 1, 9 },
         { mt_TOKEN_STRING, "\"hello\\\"there\"", 1, 12 },
         { mt_TOKEN_ERROR, "unexpected end of file while parsing string literal", 1, 27 },
     };
 
-    mt_scanner_init(scanner, "\"hello\" \"\" \"hello\\\"there\" \"never closed");
+    return run_table_tests(tests, sizeof(tests) / sizeof(tests[0]), "\"hello\" \"\" \"hello\\\"there\" \"never closed");
+}
 
-    for (size_t i = 0; i < sizeof(tests) / sizeof(tests[0]); i++) {
-        mt_scanner_scan(scanner, token);
+static char *test_scanner_can_scan_multiline_strings() {
+    TableTest tests[] = {
+        { mt_TOKEN_NAME, "print", 1, 1 },
+        { mt_TOKEN_LPAREN, "(", 1, 6 },
+        { mt_TOKEN_STRING, "\"testing\n  multiline\n  strings here,\n  get outta the way!!\"", 2, 3 },
+        { mt_TOKEN_COMMA, ",", 5, 23 },
+        { mt_TOKEN_NUMBER, "1", 5, 25 },
+    };
 
-        sprintf(buf, "expected token type %d got %d (test %ld)", tests[i].type, token->type, i);
-        mu_assert(buf, token->type == tests[i].type);
+    char *source = mt_read_entire_file("tests/fixtures/test_scanner_multiline_strings.mt");
+    mu_assert("expected source to contain data", source);
 
-        sprintf(buf, "expected token line %d got %d (test %ld)", tests[i].line, token->line, i);
-        mu_assert(buf, token->line == tests[i].line);
-
-        sprintf(buf, "expected token column %d got %d (test %ld)", tests[i].column, token->column, i);
-        mu_assert(buf, token->column == tests[i].column);
-
-        memcpy(buf_2, token->start, token->length);
-        sprintf(buf, "expected token value %s got %s (test %ld)", tests[i].expected, buf_2, i);
-        mu_assert(buf, memcmp(tests[i].expected, buf_2, strlen(tests[i].expected)) == 0);
-    }
-
-    return 0;
+    char *res = run_table_tests(tests, sizeof(tests) / sizeof(tests[0]), source);
+    free(source);
+    return res;
 }
 
 static char *test_scanner_can_scan_numbers() {
-    struct {
-        mt_TokenType type;
-        char *expected;
-        uint32_t line;
-        uint32_t column;
-    } tests[] = {
+    TableTest tests[] = {
         { mt_TOKEN_NUMBER, "0", 1, 1 },
         { mt_TOKEN_NUMBER, "1234", 1, 3 },
         { mt_TOKEN_NUMBER, "12.05", 1, 8 },
@@ -231,56 +166,18 @@ static char *test_scanner_can_scan_numbers() {
         { mt_TOKEN_ERROR, "numbers cannot start with 0", 1, 19 },
     };
 
-    mt_scanner_init(scanner, "0 1234 12.05 1..3 0123");
-
-    for (size_t i = 0; i < sizeof(tests) / sizeof(tests[0]); i++) {
-        mt_scanner_scan(scanner, token);
-
-        sprintf(buf, "expected token type %d got %d (test %ld)", tests[i].type, token->type, i);
-        mu_assert(buf, token->type == tests[i].type);
-
-        sprintf(buf, "expected token line %d got %d (test %ld)", tests[i].line, token->line, i);
-        mu_assert(buf, token->line == tests[i].line);
-
-        sprintf(buf, "expected token column %d got %d (test %ld)", tests[i].column, token->column, i);
-        mu_assert(buf, token->column == tests[i].column);
-
-        memcpy(buf_2, token->start, token->length);
-        sprintf(buf, "expected token value %s got %s (test %ld)", tests[i].expected, buf_2, i);
-        mu_assert(buf, memcmp(tests[i].expected, buf_2, strlen(tests[i].expected)) == 0);
-    }
-
-    return 0;
+    return run_table_tests(tests, sizeof(tests) / sizeof(tests[0]), "0 1234 12.05 1..3 0123");
 }
 
 static char *test_scanner_can_scan_comments() {
-    struct {
-        mt_TokenType type;
-        uint32_t line;
-        uint32_t column;
-    } tests[] = {
-        { mt_TOKEN_COLON, 1, 1 },
-        { mt_TOKEN_COMMENT, 1, 3 },
-        { mt_TOKEN_COLON_EQUAL, 2, 1 },
-        { mt_TOKEN_COMMENT, 2, 4 },
+    TableTest tests[] = {
+        { mt_TOKEN_COLON, ":", 1, 1 },
+        { mt_TOKEN_COMMENT, "# some comment", 1, 3 },
+        { mt_TOKEN_COLON_EQUAL, ":=", 2, 1 },
+        { mt_TOKEN_COMMENT, "# another comment", 2, 4 },
     };
 
-    mt_scanner_init(scanner, ": # some comment\n:= # another comment");
-
-    for (size_t i = 0; i < sizeof(tests) / sizeof(tests[0]); i++) {
-        mt_scanner_scan(scanner, token);
-
-        sprintf(buf, "expected token type %d got %d (test %ld)", tests[i].type, token->type, i);
-        mu_assert(buf, token->type == tests[i].type);
-
-        sprintf(buf, "expected token line %d got %d (test %ld)", tests[i].line, token->line, i);
-        mu_assert(buf, token->line == tests[i].line);
-
-        sprintf(buf, "expected token column %d got %d (test %ld)", tests[i].column, token->column, i);
-        mu_assert(buf, token->column == tests[i].column);
-    }
-
-    return 0;
+    return run_table_tests(tests, sizeof(tests) / sizeof(tests[0]), ": # some comment\n:= # another comment");
 }
 
 static char *run_suite() {
@@ -291,6 +188,7 @@ static char *run_suite() {
     mu_run_test(test_scanner_can_scan_identifiers);
     mu_run_test(test_scanner_can_scan_keywords);
     mu_run_test(test_scanner_can_scan_strings);
+    mu_run_test(test_scanner_can_scan_multiline_strings);
     mu_run_test(test_scanner_can_scan_numbers);
     mu_run_test(test_scanner_can_scan_comments);
     return 0;
@@ -308,7 +206,7 @@ int main(void) {
         printf("%d/%d TESTS PASSED\n", tests_run, tests_run);
     }
 
-    free(scanner);
     free(token);
+    free(scanner);
     return 0;
 }
