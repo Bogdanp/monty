@@ -50,13 +50,16 @@ static char *TOKEN_DEBUG_NAMES[] = {
     "TOKEN_FALSE",
     "TOKEN_FOR",
     "TOKEN_IF",
+    "TOKEN_IN",
     "TOKEN_MATCH",
     "TOKEN_NOT",
     "TOKEN_OR",
     "TOKEN_PROTOCOL",
     "TOKEN_RECORD",
+    "TOKEN_RETURN",
     "TOKEN_TRUE",
     "TOKEN_WHILE",
+    "TOKEN_WITH",
 };
 
 void mt_token_init(mt_Token *token) {
@@ -178,13 +181,16 @@ static void load_name(mt_Scanner *scanner, mt_Token *token) {
     else if (match_keyword(scanner, "false"))    load_token(scanner, token, mt_TOKEN_FALSE);
     else if (match_keyword(scanner, "for"))      load_token(scanner, token, mt_TOKEN_FOR);
     else if (match_keyword(scanner, "if"))       load_token(scanner, token, mt_TOKEN_IF);
+    else if (match_keyword(scanner, "in"))       load_token(scanner, token, mt_TOKEN_IN);
     else if (match_keyword(scanner, "match"))    load_token(scanner, token, mt_TOKEN_MATCH);
     else if (match_keyword(scanner, "not"))      load_token(scanner, token, mt_TOKEN_NOT);
     else if (match_keyword(scanner, "or"))       load_token(scanner, token, mt_TOKEN_OR);
     else if (match_keyword(scanner, "protocol")) load_token(scanner, token, mt_TOKEN_PROTOCOL);
     else if (match_keyword(scanner, "record"))   load_token(scanner, token, mt_TOKEN_RECORD);
+    else if (match_keyword(scanner, "return"))   load_token(scanner, token, mt_TOKEN_RETURN);
     else if (match_keyword(scanner, "true"))     load_token(scanner, token, mt_TOKEN_TRUE);
     else if (match_keyword(scanner, "while"))    load_token(scanner, token, mt_TOKEN_WHILE);
+    else if (match_keyword(scanner, "with"))     load_token(scanner, token, mt_TOKEN_WITH);
     else load_token(scanner, token, mt_TOKEN_NAME);
 }
 

@@ -49,13 +49,16 @@ typedef enum {
     mt_TOKEN_FALSE,
     mt_TOKEN_FOR,
     mt_TOKEN_IF,
+    mt_TOKEN_IN,
     mt_TOKEN_MATCH,
     mt_TOKEN_NOT,
     mt_TOKEN_OR,
     mt_TOKEN_PROTOCOL,
     mt_TOKEN_RECORD,
+    mt_TOKEN_RETURN,
     mt_TOKEN_TRUE,
     mt_TOKEN_WHILE,
+    mt_TOKEN_WITH,
 } mt_TokenType;
 
 
