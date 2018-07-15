@@ -51,32 +51,32 @@ mt_Node *mt_node_init(mt_NodeType type, uint32_t line, uint32_t column) {
     return node;
 }
 
-static void dump_node(mt_Node *node, FILE *out, uint32_t depth) {
+static void dump_node(mt_Node *node, FILE *out, uint32_t depth, char *terminator) {
     mt_NodeList *head = NULL;
 
-    for (uint32_t i = 0; i < depth; i++) {
-        fprintf(out, " ");
-    }
+    for (uint32_t i = 0; i < depth; i++) fprintf(out, " ");
 
     switch (node->type) {
-    case mt_NODE_TYPE:   fprintf(out, "TYPE(%s, line=%d, column=%d)", node->value.as_string, node->line, node->column); break;
-    case mt_NODE_NAME:   fprintf(out, "NAME(%s, line=%d, column=%d)", node->value.as_string, node->line, node->column); break;
-    case mt_NODE_STRING: fprintf(out, "STRING(\"%s\", line=%d, column=%d)", node->value.as_string, node->line, node->column); break;
+    case mt_NODE_TYPE:   fprintf(out, "TYPE(%s)", node->value.as_string); break;
+    case mt_NODE_NAME:   fprintf(out, "NAME(%s)", node->value.as_string); break;
+    case mt_NODE_STRING: fprintf(out, "STRING(\"%s\")", node->value.as_string); break;
 
     case mt_NODE_MODULE:
+        fprintf(out, "MODULE(\n");
         head = node->value.as_node_list;
         while (head) {
-            dump_node(head->value, out, depth);
+            dump_node(head->value, out, depth + 2, ",\n");
             head = head->next;
         }
+        fprintf(out, ")");
         break;
     }
 
-    fprintf(out, "\n");
+    fprintf(out, "%s", terminator);
 }
 
 void mt_node_dump(mt_Node *node, FILE *out) {
-    dump_node(node, out, 0);
+    dump_node(node, out, 0, "\n");
 }
 
 void mt_node_free(mt_Node *node) {
@@ -118,7 +118,7 @@ static mt_Node *node_from_token(mt_Token *token) {
     case mt_TOKEN_STRING:
         node = mt_node_init(mt_NODE_STRING, token->line, token->column);
         node->value.as_string = malloc(sizeof(char) * token->length - 1);
-        node->value.as_string[token->length] = 0;
+        node->value.as_string[token->length - 1] = 0;
         memcpy(node->value.as_string, token->start + 1, token->length - 2);
         return node;
 

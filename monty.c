@@ -4,10 +4,14 @@
 #include <string.h>
 
 #include "common.h"
+#include "parser.h"
 #include "scanner.h"
 
-/// --tokenize
-static bool tokenize = false;
+/// --dump-ast
+static bool dump_ast = false;
+
+/// --dump-tokens
+static bool dump_tokens = false;
 
 /// -
 static bool source_from_stdin = false;
@@ -28,7 +32,8 @@ static void print_usage(char *program_name) {
         "options:\n"
         "  -h, --help     : print this message and exit\n"
         "  -v, --version  : print the current version and exit\n"
-        "  -t, --tokenize : print all the tokens in the source code without interpreting it\n"
+        "  --dump-ast     : print all the AST nodes in the source code without interpreting it\n"
+        "  --dump-tokens  : print all the tokens in the source code without interpreting it\n"
         "  -              : read source from stdin\n"
         "  -c SOURCE      : read source from string\n"
         "  FILENAME       : read source from file\n"
@@ -81,8 +86,13 @@ static void parse_args(int *argc, char *argv[]) {
             return;
         }
 
-        if (match(arg, "-t", "--tokenize", MS)) {
-            tokenize = true;
+        if (match(arg, "--dump-ast", MS)) {
+            dump_ast = true;
+            continue;
+        }
+
+        if (match(arg, "--dump-tokens", MS)) {
+            dump_tokens = true;
             continue;
         }
 
@@ -111,11 +121,31 @@ static void parse_args(int *argc, char *argv[]) {
     }
 }
 
+static void do_dump_ast(char *filename, char *source) {
+    mt_Parser *parser = mt_parser_init(filename, source);
+    mt_Node *tree = mt_parser_parse(parser);
+    mt_node_dump(tree, stdout);
+    mt_parser_free(parser);
+}
+
+static void do_dump_tokens(char *source) {
+    mt_Scanner *scanner = mt_scanner_init(source);
+    mt_Token *token = mt_token_init();
+    char debug_buf[255];
+
+    do {
+        mt_scanner_scan(scanner, token);
+        mt_token_debug(token, debug_buf, sizeof(debug_buf));
+
+        printf("%s\n", debug_buf);
+    } while (token->type != mt_TOKEN_EOF);
+
+    mt_token_free(token);
+    mt_scanner_free(scanner);
+}
+
 int main(int argc, char *argv[]) {
     parse_args(&argc, argv);
-
-    mt_Scanner *scanner = NULL;
-    mt_Token *token = NULL;
 
     char *error = NULL;
     char *source = NULL;
@@ -134,32 +164,21 @@ int main(int argc, char *argv[]) {
         goto fail;
     }
 
-    scanner = mt_scanner_init(source);
-    token = mt_token_init();
-
-    if (tokenize) {
-        char debug_buf[255];
-
-        do {
-            mt_scanner_scan(scanner, token);
-            mt_token_debug(token, debug_buf, sizeof(debug_buf));
-
-            printf("%s\n", debug_buf);
-        } while (token->type != mt_TOKEN_EOF);
+    if (dump_ast) {
+        char *filename = source_from_filename ? source_from_filename : "[stdin]";
+        do_dump_ast(filename, source);
+    } else if (dump_tokens) {
+        do_dump_tokens(source);
     } else {
         error = "interpreter not implemented";
         goto fail;
     }
 
     if (source && !source_from_cli) free(source);
-    mt_token_free(token);
-    mt_scanner_free(scanner);
     return 0;
 
 fail:
     if (source && !source_from_cli) free(source);
-    if (token) mt_token_free(token);
-    if (scanner) mt_scanner_free(scanner);
     print_error("%s", error);
     return 1;
 }
