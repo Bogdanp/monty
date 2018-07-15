@@ -80,6 +80,9 @@ mt_Token *mt_token_init(void);
 /// Stringify a Token into a buffer for debugging.
 void mt_token_debug(mt_Token *, char *, size_t);
 
+/// Copy a Token.
+void mt_token_copy(mt_Token *, mt_Token *);
+
 /// Free a Token.
 void mt_token_free(mt_Token *);
 

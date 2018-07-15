@@ -1,0 +1,4 @@
+"Hello!"
+"Goodbye!"
+print
+Iterator

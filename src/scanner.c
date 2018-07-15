@@ -90,6 +90,14 @@ void mt_token_debug(mt_Token *token, char *buf, size_t bufsz) {
     );
 }
 
+void mt_token_copy(mt_Token *src, mt_Token *dst) {
+    dst->type = src->type;
+    dst->start = src->start;
+    dst->length = src->length;
+    dst->line = src->line;
+    dst->column = src->column;
+}
+
 void mt_token_free(mt_Token *token) {
     free(token);
 }

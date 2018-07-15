@@ -29,6 +29,7 @@ TESTOBJECTS = $(patsubst $(TESTSOURCEDIR)/%.c,$(TESTBUILDDIR)/%,$(TESTSOURCES))
 .PHONY: tests
 tests: build tests/build $(OBJECTS) $(TESTOBJECTS)
 	./tests/build/test_scanner
+	./tests/build/test_parser
 
 tests/build:
 	mkdir -p tests/build
