@@ -12,9 +12,9 @@ int tests_run = 0;
 static mt_Scanner *scanner;
 static mt_Token *token;
 static char buf[255] = "";
-static char buf_2[255] = "";
 
 #define DEBUG_TOKEN do { mt_token_debug(token, buf, 255); printf("token: %s\n", buf); } while (0);
+#define MIN(a, b) ((a < b) ? a : b)
 
 static char *test_scanner_can_scan_empty_buffers() {
     mt_scanner_init(scanner, "");
@@ -42,6 +42,8 @@ typedef struct {
 } TableTest;
 
 static char *run_table_tests(TableTest tests[], size_t ntests, char *source) {
+    char value[255] = "";
+
     mt_token_init(token);
     mt_scanner_init(scanner, source);
 
@@ -57,9 +59,9 @@ static char *run_table_tests(TableTest tests[], size_t ntests, char *source) {
         sprintf(buf, "expected token column %d got %d (test %ld)", tests[i].column, token->column, i);
         mu_assert(buf, token->column == tests[i].column);
 
-        memcpy(buf_2, token->start, token->length);
-        sprintf(buf, "expected token value %s got %s (test %ld)", tests[i].expected, buf_2, i);
-        mu_assert(buf, memcmp(tests[i].expected, buf_2, strlen(tests[i].expected)) == 0);
+        memcpy(value, token->start, MIN(token->length, 254));
+        sprintf(buf, "expected token value %s got %s (test %ld)", tests[i].expected, value, i);
+        mu_assert(buf, memcmp(tests[i].expected, value, strlen(tests[i].expected)) == 0);
     }
 
     return 0;

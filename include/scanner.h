@@ -21,6 +21,7 @@ typedef enum {
     mt_TOKEN_MINUS,
     mt_TOKEN_STAR,
     mt_TOKEN_SLASH,
+    mt_TOKEN_PERCENT,
 
     // Single and double-character tokens
     mt_TOKEN_EQUAL,
@@ -45,6 +46,7 @@ typedef enum {
     mt_TOKEN_ELSE,
     mt_TOKEN_END,
     mt_TOKEN_EXTEND,
+    mt_TOKEN_FALSE,
     mt_TOKEN_FOR,
     mt_TOKEN_IF,
     mt_TOKEN_MATCH,
@@ -52,6 +54,7 @@ typedef enum {
     mt_TOKEN_OR,
     mt_TOKEN_PROTOCOL,
     mt_TOKEN_RECORD,
+    mt_TOKEN_TRUE,
     mt_TOKEN_WHILE,
 } mt_TokenType;
 

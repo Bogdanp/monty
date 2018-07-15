@@ -25,6 +25,7 @@ static char *TOKEN_DEBUG_NAMES[] = {
     "TOKEN_MINUS",
     "TOKEN_STAR",
     "TOKEN_SLASH",
+    "TOKEN_PERCENT",
 
     "TOKEN_EQUAL",
     "TOKEN_EQUAL_EQUAL",
@@ -46,6 +47,7 @@ static char *TOKEN_DEBUG_NAMES[] = {
     "TOKEN_ELSE",
     "TOKEN_END",
     "TOKEN_EXTEND",
+    "TOKEN_FALSE",
     "TOKEN_FOR",
     "TOKEN_IF",
     "TOKEN_MATCH",
@@ -53,6 +55,7 @@ static char *TOKEN_DEBUG_NAMES[] = {
     "TOKEN_OR",
     "TOKEN_PROTOCOL",
     "TOKEN_RECORD",
+    "TOKEN_TRUE",
     "TOKEN_WHILE",
 };
 
@@ -172,6 +175,7 @@ static void load_name(mt_Scanner *scanner, mt_Token *token) {
     else if (match_keyword(scanner, "else"))     load_token(scanner, token, mt_TOKEN_ELSE);
     else if (match_keyword(scanner, "end"))      load_token(scanner, token, mt_TOKEN_END);
     else if (match_keyword(scanner, "extend"))   load_token(scanner, token, mt_TOKEN_EXTEND);
+    else if (match_keyword(scanner, "false"))    load_token(scanner, token, mt_TOKEN_FALSE);
     else if (match_keyword(scanner, "for"))      load_token(scanner, token, mt_TOKEN_FOR);
     else if (match_keyword(scanner, "if"))       load_token(scanner, token, mt_TOKEN_IF);
     else if (match_keyword(scanner, "match"))    load_token(scanner, token, mt_TOKEN_MATCH);
@@ -179,6 +183,7 @@ static void load_name(mt_Scanner *scanner, mt_Token *token) {
     else if (match_keyword(scanner, "or"))       load_token(scanner, token, mt_TOKEN_OR);
     else if (match_keyword(scanner, "protocol")) load_token(scanner, token, mt_TOKEN_PROTOCOL);
     else if (match_keyword(scanner, "record"))   load_token(scanner, token, mt_TOKEN_RECORD);
+    else if (match_keyword(scanner, "true"))     load_token(scanner, token, mt_TOKEN_TRUE);
     else if (match_keyword(scanner, "while"))    load_token(scanner, token, mt_TOKEN_WHILE);
     else load_token(scanner, token, mt_TOKEN_NAME);
 }
@@ -295,6 +300,7 @@ void mt_scanner_scan(mt_Scanner *scanner, mt_Token *token) {
     case '-': load_token(scanner, token, mt_TOKEN_MINUS); break;
     case '*': load_token(scanner, token, mt_TOKEN_STAR); break;
     case '/': load_token(scanner, token, mt_TOKEN_SLASH); break;
+    case '%': load_token(scanner, token, mt_TOKEN_PERCENT); break;
 
     case '=':
         if (match(scanner, '=')) load_token(scanner, token, mt_TOKEN_EQUAL_EQUAL);
