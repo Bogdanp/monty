@@ -73,12 +73,15 @@ typedef struct {
     uint32_t column;
 } mt_Token;
 
-/// Initialize a token's internals.  The token must be allocated and
-/// freed by the user.
-void mt_token_init(mt_Token *);
+/// Initialize a Token.  Returns NULL if there is not enough free
+/// memory.
+mt_Token *mt_token_init(void);
 
-/// Stringify a token into a buffer for debugging.
+/// Stringify a Token into a buffer for debugging.
 void mt_token_debug(mt_Token *, char *, size_t);
+
+/// Free a Token.
+void mt_token_free(mt_Token *);
 
 
 /// Scanners are views on top of character buffers that yield tokens.
@@ -92,11 +95,14 @@ typedef struct {
     uint32_t column; ///< the current column number (1 indexed)
 } mt_Scanner;
 
-/// Initialize a scanner's internals.  The scanner must be allocated
-/// and freed by the user.
-void mt_scanner_init(mt_Scanner *, char *);
+/// Initialize a Scanner.  Returns NULL if there is not enough free
+/// memory.  The source parameter must outlive the scanner.
+mt_Scanner *mt_scanner_init(char *);
 
 /// Extract the next token from a scanner.
 void mt_scanner_scan(mt_Scanner *, mt_Token *);
+
+/// Free a Scanner.
+void mt_scanner_free(mt_Scanner *);
 
 #endif

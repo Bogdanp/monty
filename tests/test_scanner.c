@@ -16,24 +16,6 @@ static char buf[255] = "";
 #define DEBUG_TOKEN do { mt_token_debug(token, buf, 255); printf("token: %s\n", buf); } while (0);
 #define MIN(a, b) ((a < b) ? a : b)
 
-static char *test_scanner_can_scan_empty_buffers() {
-    mt_scanner_init(scanner, "");
-    mt_scanner_scan(scanner, token);
-    mu_assert("expected mt_TOKEN_EOF", token->type == mt_TOKEN_EOF);
-    return 0;
-}
-
-static char *test_scanner_leaves_buffers_intact() {
-    char original[] = "record Human\n  String name\nend";
-    memcpy(buf, original, sizeof(original));
-
-    mt_scanner_init(scanner, buf);
-    do { mt_scanner_scan(scanner, token); } while (token->type != mt_TOKEN_EOF);
-
-    mu_assert("expected the buffer to remain intact", memcmp(original, buf, sizeof(original)) == 0);
-    return 0;
-}
-
 typedef struct {
     mt_TokenType type;
     char *expected;
@@ -41,11 +23,24 @@ typedef struct {
     uint32_t column;
 } TableTest;
 
+static void teardown() {
+    if (token) mt_token_free(token);
+    if (scanner) mt_scanner_free(scanner);
+}
+
+static char *test_scanner_can_scan_empty_buffers() {
+    scanner = mt_scanner_init("");
+    token = mt_token_init();
+    mt_scanner_scan(scanner, token);
+    mu_assert("expected mt_TOKEN_EOF", token->type == mt_TOKEN_EOF);
+    return 0;
+}
+
 static char *run_table_tests(TableTest tests[], size_t ntests, char *source) {
     char value[255] = "";
 
-    mt_token_init(token);
-    mt_scanner_init(scanner, source);
+    scanner = mt_scanner_init(source);
+    token = mt_token_init();
 
     for (size_t i = 0; i < ntests; i++) {
         mt_scanner_scan(scanner, token);
@@ -184,7 +179,6 @@ static char *test_scanner_can_scan_comments() {
 
 static char *run_suite() {
     mu_run_test(test_scanner_can_scan_empty_buffers);
-    mu_run_test(test_scanner_leaves_buffers_intact);
     mu_run_test(test_scanner_can_scan_single_character_tokens);
     mu_run_test(test_scanner_can_scan_multi_character_tokens);
     mu_run_test(test_scanner_can_scan_identifiers);
@@ -197,10 +191,6 @@ static char *run_suite() {
 }
 
 int main(void) {
-    scanner = malloc(sizeof(mt_Scanner));
-    token = malloc(sizeof(mt_Token));
-    mt_token_init(token);
-
     char *message = run_suite();
     if (message) {
         fprintf(stderr, "ERROR[%d]: %s\n", tests_run, message);
@@ -208,7 +198,5 @@ int main(void) {
         printf("%d/%d TESTS PASSED\n", tests_run, tests_run);
     }
 
-    free(token);
-    free(scanner);
     return 0;
 }

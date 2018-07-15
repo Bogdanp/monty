@@ -114,9 +114,8 @@ static void parse_args(int *argc, char *argv[]) {
 int main(int argc, char *argv[]) {
     parse_args(&argc, argv);
 
-    mt_Scanner *scanner = malloc(sizeof(mt_Scanner));
-    mt_Token *token = malloc(sizeof(mt_Token));
-    mt_token_init(token);
+    mt_Scanner *scanner = NULL;
+    mt_Token *token = NULL;
 
     char *error = NULL;
     char *source = NULL;
@@ -135,7 +134,8 @@ int main(int argc, char *argv[]) {
         goto fail;
     }
 
-    mt_scanner_init(scanner, source);
+    scanner = mt_scanner_init(source);
+    token = mt_token_init();
 
     if (tokenize) {
         char debug_buf[255];
@@ -152,14 +152,14 @@ int main(int argc, char *argv[]) {
     }
 
     if (source && !source_from_cli) free(source);
-    free(token);
-    free(scanner);
+    mt_token_free(token);
+    mt_scanner_free(scanner);
     return 0;
 
 fail:
     if (source && !source_from_cli) free(source);
-    if (token) free(token);
-    if (scanner) free(scanner);
+    if (token) mt_token_free(token);
+    if (scanner) mt_scanner_free(scanner);
     print_error("%s", error);
     return 1;
 }

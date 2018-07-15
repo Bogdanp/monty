@@ -13,9 +13,11 @@
         char *message = test();                 \
         tests_run++;                            \
         if (message) {                          \
+            teardown();                         \
             printf(" [ FAIL ]\n");              \
             return message;                     \
         } else {                                \
+            teardown();                         \
             printf(" [ OK ]\n");                \
         }                                       \
     } while (0)

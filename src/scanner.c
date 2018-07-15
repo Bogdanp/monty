@@ -62,12 +62,17 @@ static char *TOKEN_DEBUG_NAMES[] = {
     "TOKEN_WITH",
 };
 
-void mt_token_init(mt_Token *token) {
+mt_Token *mt_token_init() {
+    mt_Token *token = malloc(sizeof(mt_Token));
+    if (!token) return NULL;
+
     token->type = mt_TOKEN_EOF;
     token->start = NULL;
     token->length = 0;
     token->line = 0;
     token->column = 0;
+
+    return token;
 }
 
 void mt_token_debug(mt_Token *token, char *buf, size_t bufsz) {
@@ -84,6 +89,11 @@ void mt_token_debug(mt_Token *token, char *buf, size_t bufsz) {
         token->column
     );
 }
+
+void mt_token_free(mt_Token *token) {
+    free(token);
+}
+
 
 static void load_token(mt_Scanner *scanner, mt_Token *token, mt_TokenType type) {
     token->type = type;
@@ -269,12 +279,17 @@ static void load_string(mt_Scanner *scanner, mt_Token *token) {
     }
 }
 
-void mt_scanner_init(mt_Scanner *scanner, char *buffer) {
+mt_Scanner *mt_scanner_init(char *buffer) {
+    mt_Scanner *scanner = malloc(sizeof(mt_Scanner));
+    if (!scanner) return NULL;
+
     memset(scanner->error, 0, 255);
     scanner->start = buffer;
     scanner->current = buffer;
     scanner->line = 1;
     scanner->column = 0;
+
+    return scanner;
 }
 
 void mt_scanner_scan(mt_Scanner *scanner, mt_Token *token) {
@@ -348,4 +363,8 @@ void mt_scanner_scan(mt_Scanner *scanner, mt_Token *token) {
         fail_token(scanner, token, scanner->error);
         break;
     }
+}
+
+void mt_scanner_free(mt_Scanner *scanner) {
+    free(scanner);
 }
