@@ -1,6 +1,7 @@
 #ifndef mt_parser_h
 #define mt_parser_h
 
+#include <stdio.h>
 #include <stdint.h>
 
 #include "scanner.h"
@@ -8,6 +9,7 @@
 typedef enum {
     mt_NODE_MODULE,
     mt_NODE_STRING,
+    mt_NODE_TYPE,
     mt_NODE_NAME,
 } mt_NodeType;
 
@@ -28,13 +30,16 @@ typedef union {
 typedef struct Node {
     mt_NodeType type;
     mt_NodeValue value;
+
+    uint32_t line;
+    uint32_t column;
 } mt_Node;
 
 /// Create a Node.  Returns NULL if there isn't enough free memory.
-mt_Node *mt_node_init(mt_NodeType type);
+mt_Node *mt_node_init(mt_NodeType type, uint32_t, uint32_t);
 
-/// Dump a Node to stdout.
-void mt_node_dump(mt_Node *, uint32_t);
+/// Dump a Node to a stream.
+void mt_node_dump(mt_Node *, FILE *);
 
 /// Free a Node.
 void mt_node_free(mt_Node *);

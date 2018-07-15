@@ -33,7 +33,7 @@ static char *test_parser_can_parse_basic_expressions() {
     mu_assert("expected a tree", tree);
 
     printf("\n\n");
-    mt_node_dump(tree, 0);
+    mt_node_dump(tree, stdout);
 
     free(source);
     return 0;

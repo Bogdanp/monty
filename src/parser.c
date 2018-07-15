@@ -40,36 +40,43 @@ static void node_list_free(mt_NodeList *head) {
     }
 }
 
-mt_Node *mt_node_init(mt_NodeType type) {
+mt_Node *mt_node_init(mt_NodeType type, uint32_t line, uint32_t column) {
     mt_Node *node = malloc(sizeof(mt_Node));
     if (!node) return NULL;
 
     node->type = type;
     node->value.as_node_list = NULL;
+    node->line = line;
+    node->column = column;
     return node;
 }
 
-void mt_node_dump(mt_Node *node, uint32_t depth) {
+static void dump_node(mt_Node *node, FILE *out, uint32_t depth) {
     mt_NodeList *head = NULL;
 
     for (uint32_t i = 0; i < depth; i++) {
-        printf(" ");
+        fprintf(out, " ");
     }
 
     switch (node->type) {
-    case mt_NODE_NAME:   printf("NAME(%s)", node->value.as_string); break;
-    case mt_NODE_STRING: printf("STRING(\"%s\")", node->value.as_string); break;
+    case mt_NODE_TYPE:   fprintf(out, "TYPE(%s, line=%d, column=%d)", node->value.as_string, node->line, node->column); break;
+    case mt_NODE_NAME:   fprintf(out, "NAME(%s, line=%d, column=%d)", node->value.as_string, node->line, node->column); break;
+    case mt_NODE_STRING: fprintf(out, "STRING(\"%s\", line=%d, column=%d)", node->value.as_string, node->line, node->column); break;
 
     case mt_NODE_MODULE:
         head = node->value.as_node_list;
         while (head) {
-            mt_node_dump(head->value, depth);
+            dump_node(head->value, out, depth);
             head = head->next;
         }
         break;
     }
 
-    printf("\n");
+    fprintf(out, "\n");
+}
+
+void mt_node_dump(mt_Node *node, FILE *out) {
+    dump_node(node, out, 0);
 }
 
 void mt_node_free(mt_Node *node) {
@@ -95,15 +102,21 @@ static mt_Node *node_from_token(mt_Token *token) {
 
     switch (token->type) {
     case mt_TOKEN_CAP_NAME:
+        node = mt_node_init(mt_NODE_TYPE, token->line, token->column);
+        node->value.as_string = malloc(sizeof(char) * token->length + 1);
+        node->value.as_string[token->length] = 0;
+        memcpy(node->value.as_string, token->start, token->length);
+        return node;
+
     case mt_TOKEN_NAME:
-        node = mt_node_init(mt_NODE_NAME);
+        node = mt_node_init(mt_NODE_NAME, token->line, token->column);
         node->value.as_string = malloc(sizeof(char) * token->length + 1);
         node->value.as_string[token->length] = 0;
         memcpy(node->value.as_string, token->start, token->length);
         return node;
 
     case mt_TOKEN_STRING:
-        node = mt_node_init(mt_NODE_STRING);
+        node = mt_node_init(mt_NODE_STRING, token->line, token->column);
         node->value.as_string = malloc(sizeof(char) * token->length - 1);
         node->value.as_string[token->length] = 0;
         memcpy(node->value.as_string, token->start + 1, token->length - 2);
@@ -149,7 +162,7 @@ mt_Parser *mt_parser_init(char *filename, char *source) {
     parser->current_token = mt_token_init();
     if (!parser->current_token) goto fail;
 
-    parser->tree = mt_node_init(mt_NODE_MODULE);
+    parser->tree = mt_node_init(mt_NODE_MODULE, 0, 0);
     if (!parser->tree) goto fail;
 
     return parser;
