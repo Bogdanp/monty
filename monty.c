@@ -43,6 +43,25 @@ static void print_version() {
     exit(0);
 }
 
+#define MS NULL
+static bool match(char *arg, ...) {
+    va_list args;
+    va_start(args, arg);
+
+    while (true) {
+        char *variant = va_arg(args, char *);
+        if (variant == MS) {
+            return false;
+        }
+
+        if (strcmp(arg, variant) == 0) {
+            return true;
+        }
+    }
+
+    va_end(args);
+}
+
 static void parse_args(int *argc, char *argv[]) {
     if (*argc <= 1) {
         print_usage(argv[0]);
@@ -50,22 +69,24 @@ static void parse_args(int *argc, char *argv[]) {
     }
 
     for (int i = 1; i < *argc; i++) {
-        if (strcmp(argv[i], "-h") == 0 || strcmp(argv[i], "--help") == 0) {
+        char *arg = argv[i];
+
+        if (match(arg, "-h", "--help", MS)) {
             print_usage(argv[0]);
             return;
         }
 
-        if (strcmp(argv[i], "-v") == 0 || strcmp(argv[i], "--version") == 0) {
+        if (match(arg, "-v", "--version", MS)) {
             print_version();
             return;
         }
 
-        if (strcmp(argv[i], "-t") == 0 || strcmp(argv[i], "--tokenize") == 0) {
+        if (match(arg, "-t", "--tokenize", MS)) {
             tokenize = true;
             continue;
         }
 
-        if (strcmp(argv[i], "-c") == 0) {
+        if (match(arg, "-c", MS)) {
             if (++i >= *argc) {
                 print_error("-c flag expects an argument");
                 return;
@@ -75,17 +96,17 @@ static void parse_args(int *argc, char *argv[]) {
             return;
         }
 
-        if (strcmp(argv[i], "-") == 0) {
+        if (match(arg, "-", MS)) {
             source_from_stdin = true;
             return;
         }
 
-        if (argv[i][0] == '-') {
-            print_error("unrecognized command line argument '%s'", argv[i]);
+        if (arg[0] == '-') {
+            print_error("unrecognized command line argument '%s'", arg);
             return;
         }
 
-        source_from_filename = argv[i];
+        source_from_filename = arg;
         return;
     }
 }
